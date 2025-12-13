@@ -28,6 +28,9 @@ wheels/
 *.sqlite
 *.sqlite3
 
+# Checkpoint files
+*checkpoint*.json
+
 # IDE
 .vscode/
 .idea/

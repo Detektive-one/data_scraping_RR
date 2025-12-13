@@ -13,8 +13,13 @@ data_scraping_RR/
 ├── parser.py          # HTML parsing functions
 ├── normalizer.py      # Data cleanup and type conversion
 ├── loader.py          # Database insert/upsert operations
+├── checkpoint.py      # Checkpoint management for pause/resume
+├── utils.py           # Utility functions (jitter, formatting)
 ├── run_scrape.py      # Main orchestration script
+├── manage_checkpoint.py  # Checkpoint management utility
+├── test_pipeline.py   # Test suite
 ├── simple_scrapper.py # Original prototype (for reference)
+├── scraper_checkpoint.json  # Progress checkpoint (auto-created)
 └── royalroad.db       # SQLite database (created on first run)
 ```
 
@@ -89,10 +94,86 @@ The `fictions` table contains:
 - ✅ Modular architecture with clear separation of concerns
 - ✅ Automatic database initialization
 - ✅ Upsert logic (updates existing records)
-- ✅ Rate limiting to be respectful to the server
+- ✅ **Checkpoint system** - Pause and resume scraping anytime
+- ✅ **Jitter-based rate limiting** - Anti-fingerprinting timing randomization
+- ✅ **Hard cap on novels** - Stops automatically at 65,000 novels
 - ✅ Error handling and retry logic
-- ✅ Progress reporting
+- ✅ Progress reporting with time estimates
 - ✅ Graceful shutdown on Ctrl+C
+
+## Usage
+
+### Basic Scraping
+
+```bash
+# Start scraping (or resume from checkpoint)
+python run_scrape.py
+```
+
+### Pause and Resume
+
+**To pause:**
+- Press `Ctrl+C` once - the scraper will finish the current batch and save progress
+- Press `Ctrl+C` twice - force quit (may lose current batch)
+
+**To resume:**
+- Simply run `python run_scrape.py` again - it will automatically resume from the last checkpoint
+
+### Manage Checkpoints
+
+```bash
+# View current checkpoint status
+python manage_checkpoint.py show
+
+# Clear checkpoint to start fresh
+python manage_checkpoint.py clear
+
+# Interactive menu
+python manage_checkpoint.py
+```
+
+### Configuration
+
+Edit `config.py` to adjust:
+
+- **MAX_PAGES**: Number of listing pages (default: 3000)
+- **MAX_NOVELS**: Hard cap on total novels (default: 65,000)
+- **RATE_LIMIT_BETWEEN_PAGES**: Base delay between pages (default: 1.5s)
+- **RATE_LIMIT_BETWEEN_FICTIONS**: Base delay between fictions (default: 0.5s)
+- **JITTER_PAGES**: Random jitter for pages (default: 0.3s)
+- **JITTER_FICTIONS**: Random jitter for fictions (default: 0.2s)
+
+## How It Works
+
+### Checkpoint System
+
+The scraper automatically saves progress after each page:
+- **Current page number** - Where to resume from
+- **Total novels scraped** - Running count
+- **Last fiction ID** - For verification
+- **Timestamp** - When checkpoint was saved
+
+Checkpoint is saved to `scraper_checkpoint.json`
+
+### Anti-Fingerprinting
+
+Rate limiting uses **jitter** (random delays) to avoid robotic timing:
+```python
+# Instead of always sleeping 1.5s
+sleep(1.5)
+
+# We sleep 1.5s + random(0 to 0.3s)
+sleep_with_jitter(1.5, 0.3)  # Sleeps 1.5-1.8s
+```
+
+This makes request timing appear more human-like.
+
+### Hard Cap
+
+The scraper will automatically stop when:
+1. **MAX_NOVELS** (65,000) is reached, OR
+2. **MAX_PAGES** (3000) is reached, OR
+3. No more fictions are found
 
 ## Notes
 
