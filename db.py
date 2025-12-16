@@ -26,6 +26,11 @@ class Fiction(Base):
 
     status       = Column(String)
     last_updated = Column(String)
+    
+    # New fields
+    fiction_type = Column(String)  # Original, Fanfiction, etc.
+    warn_tags    = Column(Text)    # JSON string of warning tags (Gore, etc.)
+    content_warnings = Column(Text) # JSON string of content warnings (AI, Mature)
 
     scraped_at   = Column(String, nullable=False)
 

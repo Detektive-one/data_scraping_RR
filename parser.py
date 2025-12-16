@@ -108,3 +108,78 @@ def parse_fiction_page(html):
     data['last_updated'] = stats_dict.get('Last Updated')
 
     return data
+
+
+def parse_fiction_details(html):
+    """
+    Parse detailed fields including warnings and status from fiction page.
+    
+    Args:
+        html (str): HTML content of a fiction page
+        
+    Returns:
+        dict: Dictionary containing:
+            - fiction_type (str)
+            - status (str)
+            - last_updated (str)
+            - warning_tags (list)
+            - content_warnings (list)
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    result = {
+        'fiction_type': None,
+        'status': None,
+        'last_updated': None,
+        'warning_tags': [],
+        'content_warnings': []
+    }
+    
+    # Fiction Type and Status - from labels
+    labels = soup.select('.fiction-info .label')
+    for label in labels:
+        text = label.get_text(strip=True).upper()
+        
+        # Check if it's fiction type
+        if text in ['ORIGINAL', 'FANFICTION', 'FAN FICTION']:
+            result['fiction_type'] = text.title()
+        
+        # Check if it's status
+        if text in ['ONGOING', 'COMPLETED', 'HIATUS', 'STUB', 'DROPPED', 'INACTIVE']:
+            result['status'] = text.title()
+    
+    # Last Updated - from time tags
+    time_tags = soup.select('time[unixtime]')
+    if time_tags:
+        result['last_updated'] = time_tags[0].get('datetime') or time_tags[0].get('title')
+        
+    # Warning Tags - check all tags for known warning keywords
+    all_tags = soup.select('span.tags a.fiction-tag')
+    warning_keywords = ['gore', 'profanity', 'sexual content', 'traumatising content', 
+                        'graphic violence', 'sensitive content']
+    
+    for tag in all_tags:
+        tag_text = tag.get_text(strip=True)
+        if any(keyword in tag_text.lower() for keyword in warning_keywords):
+            result['warning_tags'].append(tag_text)
+            
+    # Check for specific warning section (AI, Mature, etc.)
+    # <div style="padding: 5px 0" class="text-center font-red-sunglo">
+    warning_div = soup.select_one('div.text-center.font-red-sunglo')
+    if warning_div:
+        warnings = warning_div.select('ul.list-inline li')
+        for w in warnings:
+            w_text = w.get_text(strip=True)
+            if w_text and w_text not in result['content_warnings']:
+                result['content_warnings'].append(w_text)
+    
+    # Fallback to labels for content warnings
+    warning_labels = soup.select('.label-danger, .label-warning, .content-warning')
+    for w in warning_labels:
+        warning_text = w.get_text(strip=True)
+        if warning_text and warning_text not in result['content_warnings']:
+            # SIMPLE DEDUPLICATION: Check if similar warning already exists?
+            # For now, just exact match check
+            if warning_text not in result['content_warnings']:
+                result['content_warnings'].append(warning_text)
+
+    return result
