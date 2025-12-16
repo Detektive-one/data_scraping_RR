@@ -16,7 +16,7 @@ from config import RATE_LIMIT_BETWEEN_FICTIONS, JITTER_FICTIONS
 
 # Constants
 CHECKPOINT_FILE = "update_checkpoint.json"
-UPDATE_BATCH_SIZE = 10
+UPDATE_BATCH_SIZE = 50
 
 # Global shutdown flag
 shutdown_requested = False
